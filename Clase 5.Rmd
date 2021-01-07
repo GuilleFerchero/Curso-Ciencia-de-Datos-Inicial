@@ -1,0 +1,165 @@
+---
+title: "Clase 5"
+author: "Ferchero Juan Guillermo"
+date: "11/11/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## Gráficos con ggplot2
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r inicio}
+####Limpiamos nuestro ambiente de trabajo####
+
+rm(list = ls())
+
+####Instalamos y activamos paquetes de trabajo####
+
+library("tidyverse")
+
+
+
+setwd("C:/Users/Guille/Dropbox/R/Curso Ciencia de Datos con R/Curso R Nivel Inicial")
+
+```
+
+### El dataset de trasplantes
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+####Levantamos base de trasplantes####
+
+link <- "http://cdn.buenosaires.gob.ar/datosabiertos/datasets/donacion-y-trasplante-de-organos-y-tejidos-en-la-ciudad-de-buenos-aires/trasplantes.csv"
+
+Basetrasplantes <- read.csv(link, sep = ";", encoding = "UTF-8") #Leemos datos desde link
+
+Basetrasplantesrecod <- Basetrasplantes %>% 
+  mutate("SexoRecod" = case_when(SEXO == "MASC" ~ "Masculino",
+                                 SEXO == "FEM" ~ "Femenino",
+                                 SEXO == "MASC " ~ "Masculino",
+                                 SEXO == "FEM " ~ "Femenino"),
+         "Región" = case_when(COMUNA %in% c("COMUNA 12","COMUNA 13","COMUNA 14","COMUNA 02") ~ "Norte",
+                              COMUNA %in% c("COMUNA 05","COMUNA 06","COMUNA 07","COMUNA 10","COMUNA 11","COMUNA 15","COMUNA 01","COMUNA 03") ~ "Centro",
+                              COMUNA %in% c("COMUNA 08","COMUNA 04","COMUNA 09") ~ "Sur",
+                              COMUNA == "" ~ "Sin Informar"),
+         "Edad" = case_when(EDAD >= 0 & EDAD < 10 ~ "Menores de 10",
+                            EDAD >= 10 & EDAD < 20 ~ "de 10 hasta 20",
+                            EDAD >= 20 & EDAD < 30 ~ "de 20 hasta 30",
+                            EDAD >= 30 & EDAD < 40 ~ "de 30 hasta 40",
+                            EDAD >= 40 & EDAD < 50 ~ "de 40 hasta 50",
+                            EDAD >= 50 & EDAD < 60 ~ "de 50 hasta 60",
+                            TRUE ~ "Mayores de 60"))
+
+Casos <- nrow(Basetrasplantesrecod)
+
+Desde <- min(Basetrasplantesrecod$PERIODO)
+
+Hasta <- max(Basetrasplantesrecod$PERIODO)
+
+```
+
+La base contiene `r Casos` casos desde el año `r Desde` (alt gr + tecla de llave) hasta `r Hasta`
+
+A continuación veremos un gráfico de barras que refleje la distribución por sexo:
+
+```{r}
+
+########Visualización##############
+
+
+#Paletas https://colors.muz.li/
+
+ggplot(Basetrasplantesrecod, aes(x = Región, fill = SexoRecod))+
+  geom_bar()
+
+ggplot(Basetrasplantesrecod %>% 
+         filter(Región != "Sin Informar") , aes(x = Región, fill = SexoRecod))+
+  geom_bar(position = "dodge")+
+  scale_fill_manual(values = c("#58b368","#dad873"))+
+  theme_minimal()+
+  labs(title = "Casos según sexo",
+       caption = "Datos Abiertos CABA",
+       y = "casos")+
+  theme( plot.title = element_text(hjust = 0.5 , vjust = 0.5))+
+  geom_text(stat='count', aes(x = Región, label = ..count..), position=position_dodge(width=0.9), vjust=-0.35)+
+  coord_flip()
+
+
+
+
+# ggplot(Basetrasplantesrecod %>% 
+#          filter(Región != "Sin Informar"), aes(x = Región , fill = SexoRecod))+
+#   geom_bar(position = "dodge")+
+#   scale_fill_manual(values = c("#7c4739","#bae8e8"))+
+#   theme_minimal()+
+#   labs(title = "Casos según sexo",
+#        caption = "Datos Abiertos CABA")+
+#   theme(
+#     plot.title = element_text( hjust = 0.5 , vjust = 0.5)
+#   )
+
+
+
+
+
+```
+
+Vamos a ver como hacer un boxplot
+
+
+```{r}
+ggplot(Basetrasplantesrecod,aes(x = Región , y = EDAD))+
+  geom_boxplot(color ="#58b368" )+
+  theme_minimal()
+```
+
+
+También es posible graficar a partir de tablas
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+Tabla1 <- Basetrasplantesrecod %>% 
+  select(PERIODO) %>% 
+  group_by(PERIODO) %>% 
+  summarise(Casos = n())
+
+ggplot(Tabla1, aes(x = PERIODO, y = Casos))+
+  geom_line(color = "#f8aa4b")+
+  geom_point(color = "#f8aa4b")+
+  geom_text(aes(label = Casos,color = "#f8aa4b", vjust =2))+
+  theme_minimal()+
+  theme(legend.position = "none")
+
+
+```
+
+Veamos como hacer un gráfico de sectores
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+Tabla2 <- Basetrasplantesrecod %>% 
+  select(SexoRecod) %>% 
+  group_by(SexoRecod) %>% 
+  summarise(Casos = n())
+
+kable(Tabla2, align = "r") %>% 
+  kable_styling(full_width = F, position = "center")
+
+ggplot(Tabla2,aes(x="",y=Casos, fill=SexoRecod))+
+  geom_bar(stat = "identity",color="white")
+
+```
+
+
+
