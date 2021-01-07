@@ -1,0 +1,89 @@
+---
+title: "Clase RMarkdown"
+author: "Ferchero Juan Guillermo"
+date: "19/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Trasplantes
+
+A continuación analizaremos los trasplantes de CABA. 
+
+```{r message=FALSE, warning=FALSE}
+
+###Limpiamos nuestro ambiente de trabajo####
+
+rm(list = ls())
+
+####Instalamos y activamos paquetes de trabajo####
+
+library("openxlsx")
+library("tidyverse")
+
+####Levantamos base de trasplantes####
+
+link <- "http://cdn.buenosaires.gob.ar/datosabiertos/datasets/donacion-y-trasplante-de-organos-y-tejidos-en-la-ciudad-de-buenos-aires/trasplantes.csv"
+
+Basetrasplantes <- read.csv(link, sep = ";", encoding = "UTF-8") #Leemos datos desde link
+
+Basetrasplantesrecod <- Basetrasplantes %>% 
+  mutate("SexoRecod" = case_when(SEXO == "MASC" ~ "Masculino",
+                                 SEXO == "FEM" ~ "Femenino",
+                                 SEXO == "MASC " ~ "Masculino",
+                                 SEXO == "FEM " ~ "Femenino"),
+            "Región" = case_when(COMUNA %in% c("COMUNA 12","COMUNA 13","COMUNA 14","COMUNA 02") ~ "Norte",
+                                 COMUNA %in% c("COMUNA 05","COMUNA 06","COMUNA 07","COMUNA 10","COMUNA 11","COMUNA 15","COMUNA 01","COMUNA 03") ~ "Centro",
+                                 COMUNA %in% c("COMUNA 08","COMUNA 04","COMUNA 09") ~ "Sur",
+                                 COMUNA == "" ~ "Sin Informar"),
+              "Edad" = case_when(EDAD >= 0 & EDAD < 10 ~ "Menores de 10",
+                                 EDAD >= 10 & EDAD < 20 ~ "de 10 hasta 20",
+                                 EDAD >= 20 & EDAD < 30 ~ "de 20 hasta 30",
+                                 EDAD >= 30 & EDAD < 40 ~ "de 30 hasta 40",
+                                 EDAD >= 40 & EDAD < 50 ~ "de 40 hasta 50",
+                                 EDAD >= 50 & EDAD < 60 ~ "de 50 hasta 60",
+                                 TRUE ~ "Mayores de 60"))
+
+
+
+Desde <- min(Basetrasplantesrecod$PERIODO)
+
+Hasta <- max(Basetrasplantesrecod$PERIODO)
+
+Casos <- nrow(Basetrasplantesrecod)
+
+
+```
+
+
+La base contiene `r Casos` casos que cubren el período `r Desde` - `r Hasta`
+
+A continuación veremos un gráfico de barras que refleje la distribución de región por sexo
+
+
+```{r}
+##visualización
+
+#https://colors.muz.li/
+
+ggplot(Basetrasplantesrecod, aes(x = Región, fill = SexoRecod))+
+  geom_bar()
+
+ggplot(Basetrasplantesrecod %>% 
+         filter(Región != "Sin Informar"), aes(x = Región, fill = SexoRecod))+
+  geom_bar(position = "dodge")+
+  scale_fill_manual(values = c("#272643","#bae8e8"))+
+  theme_minimal()
+
+
+```
+
+
+
+
+
+
+

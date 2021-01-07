@@ -1,0 +1,190 @@
+---
+title: "Untitled"
+author: "Ferchero Juan Guillermo"
+date: "1/12/2020"
+output:
+  ioslides_presentation: default
+  powerpoint_presentation: default
+  slidy_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Base Trasplantes
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+####Limpiamos nuestro ambiente de trabajo####
+
+rm(list = ls())
+
+####Instalamos y activamos paquetes de trabajo####
+
+library("tidyverse")
+
+
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+link <- "http://cdn.buenosaires.gob.ar/datosabiertos/datasets/donacion-y-trasplante-de-organos-y-tejidos-en-la-ciudad-de-buenos-aires/trasplantes.csv"
+
+Basetrasplantes <- read.csv(link, sep = ";", encoding = "UTF-8") #Leemos datos desde link
+
+Basetrasplantesrecod <- Basetrasplantes %>% 
+  mutate("SexoRecod" = case_when(SEXO == "MASC" ~ "Masculino",
+                                 SEXO == "FEM" ~ "Femenino",
+                                 SEXO == "MASC " ~ "Masculino",
+                                 SEXO == "FEM " ~ "Femenino"),
+         "Región" = case_when(COMUNA %in% c("COMUNA 12","COMUNA 13","COMUNA 14","COMUNA 02") ~ "Norte",
+                              COMUNA %in% c("COMUNA 05","COMUNA 06","COMUNA 07","COMUNA 10","COMUNA 11","COMUNA 15","COMUNA 01","COMUNA 03") ~ "Centro",
+                              COMUNA %in% c("COMUNA 08","COMUNA 04","COMUNA 09") ~ "Sur",
+                              COMUNA == "" ~ "Sin Informar"),
+         "Edad" = case_when(EDAD >= 0 & EDAD < 10 ~ "Menores de 10",
+                            EDAD >= 10 & EDAD < 20 ~ "de 10 hasta 20",
+                            EDAD >= 20 & EDAD < 30 ~ "de 20 hasta 30",
+                            EDAD >= 30 & EDAD < 40 ~ "de 30 hasta 40",
+                            EDAD >= 40 & EDAD < 50 ~ "de 40 hasta 50",
+                            EDAD >= 50 & EDAD < 60 ~ "de 50 hasta 60",
+                            TRUE ~ "Mayores de 60"))
+
+
+Casos <- nrow(Basetrasplantesrecod)
+
+Desde <- min(Basetrasplantesrecod$PERIODO)
+
+Hasta <- max(Basetrasplantesrecod$PERIODO)
+
+```
+
+
+La Base contiene `r Casos` casos. Los mismos cubren el período de `r Desde` - `r Hasta`
+
+
+## Graficos
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(Basetrasplantesrecod, aes(x = Región, fill = SexoRecod))+
+  geom_bar()
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(Basetrasplantesrecod %>% 
+         filter(Región != "Sin Informar"), aes(x = Región, fill = SexoRecod))+#quitamos casos sin informar
+  geom_bar(position = "dodge")+ #configuramos barras adjuntas
+  scale_fill_manual(values = c("#454d66","#309975"))+#configuramos colores
+  theme_minimal()+
+  labs(title = "Casos según región",
+       caption = "Fuente: Datos abiertos CABA",
+       y = "Casos",
+       x = "")
+
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+Tabla_1 <- Basetrasplantesrecod %>% 
+  select(PERIODO) %>% 
+  group_by(PERIODO) %>% 
+  summarise(Casos = n())
+
+ggplot(Tabla_1, aes(x = PERIODO, y = Casos))+
+  geom_line(color = "#1ac0c6")+
+  geom_point(color = "#1ac0c6")+
+  geom_text(aes(label= Casos, vjust = 2))+
+  theme_minimal()+
+  labs(title = "Casos según período",
+       caption = "Fuente: Datos abiertos CABA",
+       y = "Casos",
+       x = "")
+
+
+```
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(Basetrasplantesrecod %>% 
+         filter(Región != "Sin Informar"), aes(x = Región, fill = SexoRecod))+#quitamos casos sin informar
+  geom_bar(position = "dodge")+ #configuramos barras adjuntas
+  scale_fill_manual(values = c("#454d66","#309975"))+#configuramos colores
+  theme_light()+
+  labs(title = "Casos según región",
+       caption = "Fuente: Datos abiertos CABA",
+       y = "Casos",
+       x = "")+
+  theme(plot.title = element_text(hjust = 0.5, vjust = 0.5))+
+  theme(legend.title = element_blank())
+
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(Basetrasplantesrecod %>%
+         filter(Región != "Sin Informar"), aes(x = Región, y = EDAD))+
+  geom_boxplot(color = "#facd60")+
+  theme_light()
+
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+Tabla_2 <- Basetrasplantesrecod %>% 
+  select(SexoRecod) %>% 
+  group_by(SexoRecod) %>% 
+  summarise(Casos = n())
+
+ggplot(Tabla_2, aes(x = "", y= Casos, fill=SexoRecod))+
+  geom_bar(stat = "identity")+
+  scale_fill_manual(values = c("#454d66","#309975"))+
+  geom_text(aes(label=Casos),
+            position = position_stack(vjust = 0.5))+
+  coord_flip()+
+  labs(x = "")+
+  theme_light()
+
+
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+Tabla_3 <- Basetrasplantesrecod %>% 
+  select(PERIODO) %>% 
+  group_by(PERIODO) %>% 
+  summarise(Casos = n()) %>% 
+  mutate("Casos_Acumulados" = cumsum(Casos))
+
+
+ggplot(Tabla_3, aes(x = PERIODO))+
+  geom_smooth(aes(y=Casos))+
+  geom_smooth(aes(y=Casos_Acumulados), color = "#bae8e8")+
+  geom_point(aes(y=Casos_Acumulados), color = "#bae8e8")+
+  geom_text(aes(y=Casos_Acumulados, label= Casos_Acumulados, vjust = 1.5))
+
+
+
+
+```
+
+
+
+
